@@ -2,6 +2,7 @@
     pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
     
 <%@ include file="../includes/header.jsp" %>
 
@@ -33,7 +34,15 @@
                        		<div class="form-group">
                        			<label>Writer</label> <input type="text" class="form-control" name="writer" value="${board.writer}" readonly>
                        		</div>
-                       		<button data-oper="modify" class="btn btn-default">Modify</button>
+                       		
+                       		<sec:authentication property="principal" var="pinfo"/>
+                       		
+                       		<sec:authorize access="isAuthenticated()">
+                       			<c:if test="${pinfo.username == board.writer}">
+		                       		<button data-oper="modify" class="btn btn-default">Modify</button>                       			
+                       			</c:if>
+                       		</sec:authorize>
+                       		
                        		<button data-oper="list" class="btn btn-info">List</button>
                        		
                        		<form id="operForm" action="/board/modify" method="get">
@@ -58,7 +67,9 @@
             		<div class="panel panel-default">
             			<div class="panel-heading">
             				<i class="fa fa-comments fa-fw"></i> Reply
-            				<button id="addReplyBtn" class="btn btn-primary btn-xs pull-right">New Reply</button>
+            				<sec:authorize access="isAuthenticated()">
+	            				<button id="addReplyBtn" class="btn btn-primary btn-xs pull-right">New Reply</button>            				
+            				</sec:authorize>
             			</div>
             			
             			<div class="panel-body">
@@ -101,7 +112,7 @@
 						</div>
 						<div class="form-group">
 							<label>Replyer</label>
-							<input type="text" class="form-control" name="replyer" value="replyer">
+							<input type="text" class="form-control" name="replyer" value="replyer" readonly>
 						</div>
 						<div class="form-group">
 							<label>Reply Date</label>
@@ -223,14 +234,28 @@
         		var modalRemoveBtn = $("#modalRemoveBtn");
         		var modalRegisterBtn = $("#modalRegisterBtn");
         		
+        		var replyer = null;
+        		
+        		<sec:authorize access="isAuthenticated()">
+        			replyer = '<sec:authentication property="principal.username"/>';
+        		</sec:authorize>
+        		
+        		var csrfHeaderName = "${_csrf.headerName}";
+        		var csrfTokenValue = "${_csrf.token}";
+        		
         		$("#addReplyBtn").click(function(e) {
         			modal.find("input").val("");
+        			modal.find("input[name=replyer]").val(replyer);
         			modalInputReplyDate.closest("div").hide();
         			modal.find("button[id != 'modalCloseBtn']").hide();
         			
         			modalRegisterBtn.show();
         			
         			$(".modal").modal("show");
+        		});
+        		
+        		$(document).ajaxSend(function(e, xhr, options) {
+        			xhr.setRequestHeader(csrfHeaderName, csrfTokenValue);
         		});
         		
         		modalRegisterBtn.click(function(e) {
@@ -269,10 +294,26 @@
         		});
         		
         		modalModBtn.click(function(e) {
+        			
+        			var originalReplyer = modalInputReplyer.val();
+        			
         			var reply = {
         				rno: modal.data("rno"),
-        				reply: modalInputReply.val()
+        				reply: modalInputReply.val(),
+        				replyer: originalReplyer
         			};
+        			
+        			if (!replyer) {
+        				alert("로그인 후 수정 가능");
+        				modal.modal("hide");
+        				return;
+        			}
+        			
+        			if (replyer != originalReplyer) {
+        				alert("자신이 작성한 댓글만 수정 가능합니다.");
+        				modal.modal("hide");
+        				return;
+        			}
         			
         			replyService.update(reply, function(result) {
         				alert(result);
@@ -284,7 +325,21 @@
         		modalRemoveBtn.click(function(e) {
         			var rno = modal.data("rno");
         			
-        			replyService.remove(rno, function(result) {
+        			if (!replyer) {
+        				alert("로그인 후 삭제 가능");
+        				modal.modal("hide");
+        				return;
+        			}
+        			
+        			var originalReplyer = modalInputReplyer.val();
+        			
+        			if (replyer != originalReplyer) {
+        				alert("자신이 작성한 댓글만 삭제 가능합니다.");
+        				modal.modal("hide");
+        				return;
+        			}
+        			
+        			replyService.remove(rno, originalReplyer, function(result) {
         				alert(result);
         				modal.modal("hide");
         				showList(pageNum);

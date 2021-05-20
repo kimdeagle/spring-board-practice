@@ -2,6 +2,7 @@
     pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
     
 <%@ include file="../includes/header.jsp" %>
 
@@ -23,6 +24,7 @@
                         <div class="panel-body">
                         
                         <form action="/board/modify" method="post">
+                        	<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
                        		<div class="form-group">
                        			<label>Bno</label> <input type="text" class="form-control" name="bno" value="${board.bno}" readonly>
                        		</div>
@@ -43,8 +45,16 @@
                        			<label>Update Date</label>
                        			<input type="text" class="form-control" name="updatedate" value='<fmt:formatDate pattern = "yyyy/MM/dd" value = "${board.updatedate}" />' readonly>
                        		</div>
-                       		<button type="submit" data-oper="modify" class="btn btn-default">Modify</button>
-                       		<button type="submit" data-oper="remove" class="btn btn-danger">Remove</button>
+                       		
+                       		<sec:authentication property="principal" var="pinfo"/>
+                       		
+                       		<sec:authorize access="isAuthenticated()">
+                       			<c:if test="${pinfo.username == board.writer}">
+		                       		<button type="submit" data-oper="modify" class="btn btn-default">Modify</button>
+		                       		<button type="submit" data-oper="remove" class="btn btn-danger">Remove</button>                       			
+                       			</c:if>
+                       		</sec:authorize>
+                       		
                        		<button type="submit" data-oper="list" class="btn btn-info">List</button>
                        		
                        		<input type="hidden" name="pageNum" value="${cri.pageNum}">

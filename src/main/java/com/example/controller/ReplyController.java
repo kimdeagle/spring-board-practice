@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,7 @@ public class ReplyController {
 	@Autowired
 	private ReplyService service;
 	
+	@PreAuthorize("isAuthenticated()")
 	@PostMapping(value="/new", consumes="application/json", produces= {MediaType.TEXT_PLAIN_VALUE})
 	public ResponseEntity<String> create(@RequestBody ReplyDTO reply) {
 		int insertCount = service.register(reply);
@@ -47,18 +49,20 @@ public class ReplyController {
 		return new ResponseEntity<>(service.get(rno), HttpStatus.OK);
 	}
 	
-	@DeleteMapping(value="/{rno}", produces= {MediaType.TEXT_PLAIN_VALUE})
-	public ResponseEntity<String> remove(@PathVariable("rno") Long rno) {
+	@PreAuthorize("principal.username == #dto.replyer")
+	@DeleteMapping("/{rno}")
+	public ResponseEntity<String> remove(@RequestBody ReplyDTO dto, @PathVariable("rno") Long rno) {
 		return service.remove(rno) == 1
 				? new ResponseEntity<>("success", HttpStatus.OK)
 				: new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 	
-	@RequestMapping(value="/{rno}", method= {RequestMethod.PUT, RequestMethod.PATCH}, consumes="application/json", produces= {MediaType.TEXT_PLAIN_VALUE})
-	public ResponseEntity<String> modify(@RequestBody ReplyDTO reply, @PathVariable("rno") Long rno) {
-		reply.setRno(rno);
+	@PreAuthorize("principal.username == #dto.replyer")
+	@RequestMapping(value="/{rno}", method= {RequestMethod.PUT, RequestMethod.PATCH}, consumes="application/json")
+	public ResponseEntity<String> modify(@RequestBody ReplyDTO dto, @PathVariable("rno") Long rno) {
+		dto.setRno(rno);
 		
-		return service.modify(reply) == 1
+		return service.modify(dto) == 1
 				? new ResponseEntity<>("success", HttpStatus.OK)
 				: new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
