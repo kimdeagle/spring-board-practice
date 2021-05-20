@@ -1,6 +1,7 @@
 package com.example.config;
 
 import javax.servlet.Filter;
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration.Dynamic;
 
 import org.springframework.web.filter.CharacterEncodingFilter;
@@ -26,6 +27,10 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
 	@Override
 	protected void customizeRegistration(Dynamic registration) {
 		registration.setInitParameter("throwExceptionIfNoHandlerFound", "true");
+		
+		MultipartConfigElement multipartConfig = new MultipartConfigElement("D:\\upload\\temp", 20971520, 41943040, 20971520);
+		registration.setMultipartConfig(multipartConfig);
+		
 	}
 	
 	@Override
